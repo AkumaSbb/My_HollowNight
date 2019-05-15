@@ -11,6 +11,7 @@ public class PlayerCtrlNormal : MonoBehaviour
     Rigidbody2D rigidbody2d;
     bool isGround;  //是否在地面上
     bool isJump;    //是否在跳跃
+    bool isClimb;    //是否在爬墙
     int jumpCount;  //跳跃次数
     float jumpTime; //跳跃键按下时长
     float jumpMaxTime;  //跳跃键按下的最大时长
@@ -35,6 +36,7 @@ public class PlayerCtrlNormal : MonoBehaviour
         rigidbody2d = GetComponent<Rigidbody2D>();
         isGround = true;
         isJump = false;
+        isClimb = false;
         jumpCount = 0;
         jumpTime = 0;
         jumpMaxTime = 0.15f;
@@ -53,11 +55,32 @@ public class PlayerCtrlNormal : MonoBehaviour
         SetParaByIsGround();
         Jump();
         Attack();
+        Climb();
         if(Input.GetKeyDown(KeyCode.C))
         {
             
             StartCoroutine(sprint(0.15f));
             animator.SetTrigger("setSprint");
+        }
+    }
+
+    private void Climb()
+    {
+        int playerLayerMask = LayerMask.GetMask("Player");
+        playerLayerMask = ~playerLayerMask;//过滤掉Player层
+
+        RaycastHit2D hit2d = Physics2D.Raycast(transform.position, Vector2.right, 0.5f, playerLayerMask);
+        Debug.DrawLine(transform.position, transform.position + new Vector3(0.5f, 0,0));
+
+        if (hit2d.collider != null && rigidbody2d.velocity.x > 0)
+        {
+            isClimb = true;
+            animator.SetBool("isClimb", true);
+        }
+        else
+        {
+            isClimb = false;
+            animator.SetBool("isClimb", false);
         }
     }
 

@@ -23,8 +23,8 @@ public class PlayerMoveControl : MonoBehaviour
 
     public bool inputEnable = true;   //接受输入的开关：true接受用户输入操作角色；false不接受输入
     public bool gravityEnable = true;
-    public float speed = 6.5f;  //移动速度
     public bool isCanSprint = true;   //是否能冲刺
+    public float speed = 6.5f;  //移动速度
     public float gravity = 28f;  //收到的重力
     public float jumpSpeed = 2f; //跳跃速度
     public float jumpMaxTime = 0.11f;   //跳跃最大时长
@@ -43,8 +43,7 @@ public class PlayerMoveControl : MonoBehaviour
         jumpTime = 0;
 
         moveSpeed = new Vector2(0, 0);
-
-        animator = GetComponent<Animator>();
+		
     }
 
     // Update is called once per frame
@@ -304,7 +303,24 @@ public class PlayerMoveControl : MonoBehaviour
         {
             return;
         }
+		
+		if(Input.GetKeyDown(InputManager.Instance.attackKey))
+		{
+			if(Input.GetKey(InputManager.Instance.upKey))
+            {
+				animator.SetTrigger("setAttackUp");
+            }
+            else if (Input.GetKey(InputManager.Instance.downKey) && !isGround)
+            {
+				animator.SetTrigger("setAttackDown");
+            }
+            else
+            {
+				animator.SetTrigger("setAttackLR");
+            }
+        }
     }
+	
 
     #endregion
 }

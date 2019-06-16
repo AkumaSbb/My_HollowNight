@@ -58,6 +58,7 @@ public class PlayerMoveControl : MonoBehaviour
         UpdatePlayerAnimatorState();
         UpdateGravity();
         Jump();
+		Sprint();
     }
 
     #region LRMove
@@ -321,6 +322,15 @@ public class PlayerMoveControl : MonoBehaviour
         }
     }
 	
+
+    #endregion
+	
+	#region Sprint
+
+    void Sprint()
+    {
+        
+    }
 
     #endregion
 }

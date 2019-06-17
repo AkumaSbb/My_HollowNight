@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -32,6 +33,7 @@ public class PlayerMoveControl : MonoBehaviour
     public float jumpSpeed = 2f; //跳跃速度
     public float jumpMaxTime = 0.11f;   //跳跃最大时长
     public float sprintTime = 0.2f; //冲刺持续时间
+    public float minDistance = 0.15f;  //碰撞移动的最小距离
 
     #endregion
 
@@ -51,6 +53,8 @@ public class PlayerMoveControl : MonoBehaviour
 
         playerLayerMask = LayerMask.GetMask("Player");
         playerLayerMask = ~playerLayerMask;             //获得当前玩家层级的mask值，并使用~运算，让射线忽略玩家层检测
+
+        animator = GetComponent<Animator>();
     }
 
     // Update is called once per frame
@@ -68,7 +72,9 @@ public class PlayerMoveControl : MonoBehaviour
 		Attack();
         Sprint();
 
-        animator.SetBool("IsGround", isGround);
+        animator.SetBool("isGround", isGround);
+        animator.ResetTrigger("setClimb");
+        NextFrameMove();
     }
 
     #region LRMove
@@ -101,7 +107,7 @@ public class PlayerMoveControl : MonoBehaviour
         {
             animator.SetTrigger("setStop");
             animator.ResetTrigger("setRotate");
-            animator.SetBool("IsMove", false);
+            animator.SetBool("isMove", false);
         }
         else
         {
@@ -119,7 +125,7 @@ public class PlayerMoveControl : MonoBehaviour
                 }
                 else
                 {
-                    animator.SetBool("IsMove", true);
+                    animator.SetBool("isMove", true);
                 }
             }
         }
@@ -147,17 +153,17 @@ public class PlayerMoveControl : MonoBehaviour
     {
         if(isGround) //如果在地面上
         {
-            animator.SetBool("IsJumpUp", false);
-            animator.ResetTrigger("IsJumpTwo");//重置2段跳触发器
+            animator.SetBool("isJumpUp", false);
+            animator.ResetTrigger("setJumpTwice");//重置2段跳触发器
             jumpCount = 0;
-            animator.SetBool("IsDown", false);
+            animator.SetBool("isDown", false);
             isJump = false;
             isClimb = false;
             isCanSprint = true;
         }
         else
         {
-            animator.SetBool("IsDown", !isJump);
+            animator.SetBool("isDown", !isJump);
             if(isClimb)
             {
                 jumpCount = 0;
@@ -256,22 +262,22 @@ public class PlayerMoveControl : MonoBehaviour
         //进入上跳减速状态，但还在上升
         if (moveSpeed.y > 0 && moveSpeed.y < 1.5f)
         {
-            animator.SetBool("IsSlowUp", true);
+            animator.SetBool("isSlowUp", true);
         }
         else
         {
-            animator.SetBool("IsSlowUp", false);
+            animator.SetBool("isSlowUp", false);
         }
 
         //进入下落状态
         if (moveSpeed.y < 0)
         {
 
-            animator.SetBool("IsJumpDown", true);
+            animator.SetBool("isJumpDown", true);
         }
         else
         {
-            animator.SetBool("IsJumpDown", false);
+            animator.SetBool("isJumpDown", false);
 
         }
     }
@@ -354,13 +360,13 @@ public class PlayerMoveControl : MonoBehaviour
             {
                 if (isGround)
                 {
-                    animator.SetTrigger("setGroundSprint");//播放冲刺动画
+                    animator.SetTrigger("setShadowSprintGround");//播放冲刺动画
                 }
                 else
                 {
-                    animator.SetTrigger("setFlySprint");//播放冲刺动画
+                    animator.SetTrigger("setShadowSprintFly");//播放冲刺动画
                 }
-                isShadowSprint = false;
+                //isShadowSprint = false;
             }
             else
             {
@@ -402,9 +408,216 @@ public class PlayerMoveControl : MonoBehaviour
     {
         Vector2 moveDistance = moveSpeed * Time.deltaTime;
 
-        if(moveDistance.x != 0) //左右有移动
+        if (moveDistance.x != 0) //左右有移动
         {
-            RaycastHit2D lRHit2D = Physics2D.BoxCast(transform.position, boxSize, 0, Vector2.left * transform.localScale.x, 5.0f, playerLayerMask);   //发射盒子射线
+            RaycastHit2D lRHit2D = Physics2D.BoxCast(transform.position, boxSize, 0, moveDistance.x > 0 ? Vector3.right : Vector3.left, 5.0f, playerLayerMask);   //发射盒子射线
+            if (lRHit2D.collider != null)//如果当前方向上有碰撞体
+            {
+                DrawBoxLine(lRHit2D.point, boxSize, 3.0f);  //显示盒子射线
+
+                float tempXVaule = (float)Math.Round(lRHit2D.point.x, 1);                   //取X轴方向的数值，并保留1位小数精度。防止由于精度产生鬼畜行为
+                Vector2 colliderPoint = new Vector2(tempXVaule, transform.position.y); //调整碰撞点
+                float tempDistance = Vector3.Distance(colliderPoint, transform.position);   //计算玩家与碰撞点的位置
+                if(tempDistance > boxSize.x * 0.5f + minDistance)   //在不可以移动的范围外
+                {
+                    transform.position += new Vector3(moveDistance.x, 0, 0); //说明此时还能进行正常移动，不需要进行修正
+                    if (isClimb)        //如果左右方向没有碰撞体了，退出爬墙状态
+                    {
+                        isClimb = false;
+                        animator.ResetTrigger("setClimb"); //重置触发器  退出
+                        animator.SetTrigger("setClimbToJumpDown");
+                    }
+                }
+                else //修正移动距离
+                {
+                    float tempX = tempXVaule + (boxSize.x * 0.5f + minDistance - 0.05f) * transform.localScale.x;//新的X轴的位置,多加上0.05f的修正距离，防止出现由于精度问题产生的鬼畜行为
+
+                    transform.position = new Vector3(tempX, transform.position.y, 0);//修改玩家的位置
+                    if (lRHit2D.collider.CompareTag("Untagged"))    //如果左右是墙或者天花板
+                    {
+                        ClimbFunc(transform.position); //检测当前是否能够进入爬墙状态
+                        animator.ResetTrigger("setClimbToJumpDown");
+                    }
+                }
+            }
+            else
+            {
+                transform.position += new Vector3(moveDistance.x, 0, 0);
+                if (isClimb)
+                {
+                    isClimb = false;
+                    animator.SetTrigger("setClimbToJumpDown");
+                    animator.ResetTrigger("setClimb"); //重置触发器  退出
+                }
+            }
+        }
+        else
+        {
+            if (isClimb)    //当左右速度无值时且处于爬墙状态时
+            {
+                ExitClimbFunc();
+            }
+        }
+
+        if(moveDistance.y != 0) //上下移动
+        {
+            RaycastHit2D uDHit2D = Physics2D.BoxCast(transform.position, boxSize, 0, moveDistance.y > 0?Vector3.up:Vector3.down, 5.0f, playerLayerMask);
+            if (uDHit2D.collider != null)
+            {
+                float tempYVaule = (float)Math.Round(uDHit2D.point.y, 1);
+                Vector3 colliderPoint = new Vector3(transform.position.x, tempYVaule);
+                float tempDistance = Vector3.Distance(transform.position, colliderPoint);
+
+                if (tempDistance > (boxSize.y * 0.5f + minDistance))
+                {
+                    float tempY = 0;
+                    float nextY = transform.position.y + moveDistance.y;
+                    if (moveDistance.y > 0)
+                    {
+                        tempY = tempYVaule - boxSize.y * 0.5f - minDistance;
+                        if (nextY > tempY)
+                        {
+                            transform.position = new Vector3(transform.position.x, tempY + 0.1f, 0);
+                        }
+                        else
+                        {
+                            transform.position += new Vector3(0, moveDistance.y, 0);
+                        }
+                    }
+                    else
+                    {
+                        tempY = tempYVaule + boxSize.y * 0.5f + minDistance;
+                        if (nextY < tempY)
+                        {
+                            transform.position = new Vector3(transform.position.x, tempY - 0.1f, 0); //上下方向多减少0.1f的修正距离，防止鬼畜
+                        }
+                        else
+                        {
+                            transform.position += new Vector3(0, moveDistance.y, 0);
+                        }
+                    }
+                    isGround = false;   //更新在地面的bool值
+                }
+                else
+                {
+                    float tempY = 0;
+                    if (moveDistance.y > 0)//如果是朝上方向移动，且距离小于规定距离，就说明玩家头上碰到了物体，反之同理。
+                    {
+                        tempY = uDHit2D.point.y - boxSize.y * 0.5f - minDistance + 0.05f;
+                        isGround = false;
+                        Debug.Log("头上碰到了物体");
+                    }
+                    else
+                    {
+                        tempY = uDHit2D.point.y + boxSize.y * 0.5f + minDistance - 0.05f;
+                        Debug.Log("着地");
+                        isGround = true;
+                    }
+                    moveSpeed.y = 0;
+                    transform.position = new Vector3(transform.position.x, tempY, 0);
+                }
+            }
+            else
+            {
+                isGround = false;
+                transform.position += new Vector3(0, moveDistance.y, 0);
+            }
+        }
+        else
+        {
+            isGround = CheckIsGround();//更新在地面的bool值
+        }
+    }
+
+    /// <summary>
+    /// 显示盒子射线
+    /// </summary>
+    public void DrawBoxLine(Vector3 point, Vector2 size, float time = 0)
+    {
+        float x, y;
+        x = point.x;
+        y = point.y;
+        float m, n;
+        m = size.x;
+        n = size.y;
+
+        Vector3 point1, point2, point3, point4;
+        point1 = new Vector3(x - m * 0.5f, y + n * 0.5f, 0);
+        point2 = new Vector3(x + m * 0.5f, y + n * 0.5f, 0);
+        point3 = new Vector3(x + m * 0.5f, y - n * 0.5f, 0);
+        point4 = new Vector3(x - m * 0.5f, y - n * 0.5f, 0);
+
+        Debug.DrawLine(point1, point2, Color.red, time);
+        Debug.DrawLine(point2, point3, Color.red, time);
+        Debug.DrawLine(point3, point4, Color.red, time);
+        Debug.DrawLine(point4, point1, Color.red, time);
+    }
+
+    /// <summary>
+    /// 进入爬墙的函数
+    /// </summary>
+    public void ClimbFunc(Vector3 rayPoint)
+    {
+        //设定碰到墙 且  从碰撞点往下 玩家碰撞盒子高度内  没有碰撞体  就可进入碰撞状态。
+        RaycastHit2D hit2D = Physics2D.BoxCast(rayPoint, boxSize, 0, Vector2.down, boxSize.y, playerLayerMask);
+        if (hit2D.collider != null)
+        {
+            Debug.Log("无法进入爬墙状态  " + hit2D.collider.name);
+        }
+        else
+        {
+            //如果上方是异形碰撞体，那么就无法进入爬墙状态
+            hit2D = Physics2D.BoxCast(rayPoint, boxSize, 0, Vector2.up, boxSize.y * 0.8f, playerLayerMask);
+            if (hit2D.collider == null)
+            {
+                animator.SetTrigger("setClimb");//动画切换
+                isClimb = true;
+                isCanSprint = true; //爬墙状态，冲刺重置
+            }
+        }
+    }
+
+    /// <summary>
+    /// 退出爬墙状态检测
+    /// </summary>
+    public void ExitClimbFunc()
+    {
+        RaycastHit2D hit2D = Physics2D.Raycast(transform.position, Vector2.left * transform.localScale.x, boxSize.x);
+
+        if (hit2D.collider == null)//下落到左右没有墙壁时
+        {
+            isClimb = false;
+            animator.SetTrigger("setClimbToJumpDown");
+            animator.ResetTrigger("setClimb"); //重置触发器  退出
+        }
+    }
+
+    /// <summary>
+    /// 检测是否在地面
+    /// </summary>
+    /// <returns></returns>
+    public bool CheckIsGround()
+    {
+        float aryDistance = boxSize.y * 0.5f + 0.1f;
+        RaycastHit2D hit2D = Physics2D.BoxCast(transform.position, boxSize, 0, Vector2.down, 5f, playerLayerMask);
+        Debug.DrawLine(transform.position, transform.position + Vector3.down * aryDistance, Color.red, 6.0f);
+        if (hit2D.collider != null)
+        {
+
+            float tempDistance = Vector3.Distance(transform.position, hit2D.point);
+            if (tempDistance > (boxSize.y * 0.5f + minDistance))
+            {
+                //transform.position += new Vector3(0, moveDistance.y, 0);
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
+        else
+        {
+            return false;
         }
     }
 

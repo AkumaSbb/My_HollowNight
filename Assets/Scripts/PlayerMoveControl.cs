@@ -13,9 +13,11 @@ public class PlayerMoveControl : MonoBehaviour
     bool isClimb;   //是否在爬墙
     bool isJump;   //是否在跳跃
     Vector2 moveSpeed;  //每一帧的移动速度
+    Vector2 boxSize;    //盒子射线的大小
     Animator animator;//动画控制器
     int jumpCount;  //跳跃次数
     float jumpTime; //跳跃时长
+    int playerLayerMask;    //非玩家层级，用于碰撞检测忽略玩家本身
 
     #endregion
 
@@ -24,10 +26,12 @@ public class PlayerMoveControl : MonoBehaviour
     public bool inputEnable = true;   //接受输入的开关：true接受用户输入操作角色；false不接受输入
     public bool gravityEnable = true;
     public bool isCanSprint = true;   //是否能冲刺
+    public bool isShadowSprint = true;
     public float speed = 6.5f;  //移动速度
     public float gravity = 28f;  //收到的重力
     public float jumpSpeed = 2f; //跳跃速度
     public float jumpMaxTime = 0.11f;   //跳跃最大时长
+    public float sprintTime = 0.2f; //冲刺持续时间
 
     #endregion
 
@@ -43,7 +47,10 @@ public class PlayerMoveControl : MonoBehaviour
         jumpTime = 0;
 
         moveSpeed = new Vector2(0, 0);
-		
+        boxSize = new Vector2(0.66f, 1.32f);
+
+        playerLayerMask = LayerMask.GetMask("Player");
+        playerLayerMask = ~playerLayerMask;             //获得当前玩家层级的mask值，并使用~运算，让射线忽略玩家层检测
     }
 
     // Update is called once per frame
@@ -58,7 +65,10 @@ public class PlayerMoveControl : MonoBehaviour
         UpdatePlayerAnimatorState();
         UpdateGravity();
         Jump();
-		Sprint();
+		Attack();
+        Sprint();
+
+        animator.SetBool("IsGround", isGround);
     }
 
     #region LRMove
@@ -321,7 +331,6 @@ public class PlayerMoveControl : MonoBehaviour
             }
         }
     }
-	
 
     #endregion
 	
@@ -329,7 +338,74 @@ public class PlayerMoveControl : MonoBehaviour
 
     void Sprint()
     {
-        
+		if (!inputEnable)
+        {
+            return;
+        }
+		
+		if(isCanSprint && Input.GetKeyDown(InputManager.Instance.sprintKey))
+		{
+			if(isClimb) //如果在爬墙则需要调头
+            {
+                transform.localScale = new Vector3(transform.localScale.x * -1, 1, 1);
+            }
+            StartCoroutine(SprintMove());
+            if (isShadowSprint)
+            {
+                if (isGround)
+                {
+                    animator.SetTrigger("setGroundSprint");//播放冲刺动画
+                }
+                else
+                {
+                    animator.SetTrigger("setFlySprint");//播放冲刺动画
+                }
+                isShadowSprint = false;
+            }
+            else
+            {
+                animator.SetTrigger("setSprint");//播放冲刺动画
+            }
+
+            isCanSprint = false;
+        }
+    }
+	
+	IEnumerator SprintMove()
+    {
+        inputEnable = false;
+        gravityEnable = false;
+        moveSpeed.y = 0;
+
+        moveSpeed.x = -15 * transform.localScale.x; 
+
+        yield return new WaitForSeconds(sprintTime);
+
+        inputEnable = true;
+        gravityEnable = true;
+    }
+
+    #endregion
+
+    #region SuperSprint
+
+    void SuperSprint()
+    {
+
+    }
+
+    #endregion
+
+    #region NextFrameMove
+
+    void NextFrameMove()
+    {
+        Vector2 moveDistance = moveSpeed * Time.deltaTime;
+
+        if(moveDistance.x != 0) //左右有移动
+        {
+            RaycastHit2D lRHit2D = Physics2D.BoxCast(transform.position, boxSize, 0, Vector2.left * transform.localScale.x, 5.0f, playerLayerMask);   //发射盒子射线
+        }
     }
 
     #endregion

@@ -36,7 +36,6 @@ public class PlayerCtrlNormal : MonoBehaviour
         rigidbody2d = GetComponent<Rigidbody2D>();
         isGround = true;
         isJump = false;
-        isClimb = false;
         jumpCount = 0;
         jumpTime = 0;
         jumpMaxTime = 0.15f;

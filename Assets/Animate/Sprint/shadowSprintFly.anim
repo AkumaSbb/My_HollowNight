@@ -46,7 +46,7 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.3
+        time: 0.26666668
         value: 0
         inSlope: Infinity
         outSlope: Infinity
@@ -84,7 +84,7 @@ AnimationClip:
       value: {fileID: 21300000, guid: 7f75c17427de37f4983d485eaa7851ab, type: 3}
     - time: 0.2
       value: {fileID: 21300000, guid: 8400b8d8ec945ce42809c77eea0ca8e0, type: 3}
-    - time: 0.3
+    - time: 0.26666668
       value: {fileID: 0}
     attribute: m_Sprite
     path: ShadowSprintEffect
@@ -140,7 +140,7 @@ AnimationClip:
     m_AdditiveReferencePoseClip: {fileID: 0}
     m_AdditiveReferencePoseTime: 0
     m_StartTime: 0
-    m_StopTime: 0.33333334
+    m_StopTime: 0.3
     m_OrientationOffsetY: 0
     m_Level: 0
     m_CycleOffset: 0
@@ -169,7 +169,7 @@ AnimationClip:
         inWeight: 0
         outWeight: 0
       - serializedVersion: 3
-        time: 0.3
+        time: 0.26666668
         value: 0
         inSlope: Infinity
         outSlope: Infinity

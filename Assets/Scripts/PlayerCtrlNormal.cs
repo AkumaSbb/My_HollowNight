@@ -36,6 +36,7 @@ public class PlayerCtrlNormal : MonoBehaviour
         rigidbody2d = GetComponent<Rigidbody2D>();
         isGround = true;
         isJump = false;
+        isClimb = false;
         jumpCount = 0;
         jumpTime = 0;
         jumpMaxTime = 0.15f;
@@ -176,6 +177,10 @@ public class PlayerCtrlNormal : MonoBehaviour
         //按下Z键，开始跳跃计时
         if(Input.GetKeyDown(KeyCode.Z))
         {
+            if(isClimb)
+            {
+
+            }
             isJump = true;
 
             Debug.Log(isGround);

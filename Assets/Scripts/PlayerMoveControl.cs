@@ -32,8 +32,9 @@ public class PlayerMoveControl : MonoBehaviour
     public float gravity = 28f;  //收到的重力
     public float jumpSpeed = 2f; //跳跃速度
     public float jumpMaxTime = 0.11f;   //跳跃最大时长
-    public float sprintTime = 0.2f; //冲刺持续时间
+    public float sprintTime = 0.1f; //冲刺持续时间
     public float minDistance = 0.15f;  //碰撞移动的最小距离
+    public GameObject jumpTwiceEffect;
 
     #endregion
 
@@ -241,14 +242,15 @@ public class PlayerMoveControl : MonoBehaviour
             {
                 moveSpeed.y = jumpSpeed;
                 animator.SetTrigger("setJumpTwice");
+                StartCoroutine(JumpTwiceEffect());
             }
 
             jumpTime = 0;
         }
         else if(Input.GetKey(InputManager.Instance.jumpKey) && isJump && jumpCount <= 2)
         {
-            jumpTime += Time.deltaTime;
-            if(jumpTime < jumpMaxTime)
+            jumpTime += 0.02f;
+            if (jumpTime < jumpMaxTime)
             {
                 moveSpeed.y += jumpSpeed;
             }
@@ -280,6 +282,14 @@ public class PlayerMoveControl : MonoBehaviour
             animator.SetBool("isJumpDown", false);
 
         }
+    }
+
+    IEnumerator JumpTwiceEffect()
+    {
+        jumpTwiceEffect.SetActive(true);
+        yield return new WaitForSeconds(1f);
+        jumpTwiceEffect.SetActive(false);
+
     }
 
     /// <summary>
@@ -366,7 +376,6 @@ public class PlayerMoveControl : MonoBehaviour
                 {
                     animator.SetTrigger("setShadowSprintFly");//播放冲刺动画
                 }
-                //isShadowSprint = false;
             }
             else
             {
@@ -406,6 +415,10 @@ public class PlayerMoveControl : MonoBehaviour
 
     void NextFrameMove()
     {
+        if(isClimb)
+        {
+            animator.SetTrigger("setClimb");
+        }
         Vector2 moveDistance = moveSpeed * Time.deltaTime;
 
         if (moveDistance.x != 0) //左右有移动
